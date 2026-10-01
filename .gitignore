@@ -1,0 +1,8 @@
+.git/
+.theos/
+packages/
+theos/
+build/
+__pycache__/
+*.pyc
+*.deb
