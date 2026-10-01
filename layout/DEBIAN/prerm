@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+case "${1:-}" in
+    remove|deconfigure)
+        if command -v uicache >/dev/null 2>&1; then uicache -u /Applications/ICamController.app || true; fi
+        killall mediaserverd cameracaptured 2>/dev/null || true
+        ;;
+esac
+exit 0

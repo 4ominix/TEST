@@ -1,0 +1,19 @@
+Package: com.icamv3.rebuild
+Name: iCamV3 Rebuild
+Version: 2.0.0
+Architecture: iphoneos-arm64e
+Maintainer: 4ominix
+Author: 4ominix
+Section: Applications
+Depends: mobilesubstrate, firmware (>= 15.0)
+Pre-Depends: rootless-compat (>= 0.9)
+Conflicts: com.icamv3.app
+Replaces: com.icamv3.app
+Description: Camera ảo ngoại tuyến, viết lại theo kiến trúc độc lập.
+ Chọn ảnh/video, phát lặp, lật ngang, xoay, Fit/Fill, dịch chuyển và zoom.
+ Không đăng nhập, không tài khoản, không backend và không OBS/RTMP.
+ App arm64 độc lập; camera/điều khiển arm64 và arm64e cho RootHide iOS 15–16.
+ Khi chưa có frame thay thế hợp lệ, giữ nguyên sample camera thật.
+ Bảng nổi mặc định tắt; bật trong app sau khi xác nhận phần camera ổn định.
+ Bản viết lại cần kiểm thử trên thiết bị trước khi coi là ổn định.
+Icon: file:///Applications/ICamController.app/AppIcon60x60@2x.png

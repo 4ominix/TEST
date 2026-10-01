@@ -1,0 +1,25 @@
+#!/bin/sh
+set -eu
+APP_PATH="/Applications/ICamController.app"
+SHARED_DIR="/var/mobile/Library/iCamV3Rebuild"
+TWEAK_DIR="/Library/MobileSubstrate/DynamicLibraries"
+if [ ! -x "$APP_PATH/ICamController" ] || [ ! -f "$APP_PATH/Info.plist" ]; then
+    echo 'iCamV3: missing controller app/executable' >&2; exit 1
+fi
+for name in ICamCamera ICamControls; do
+    test -f "$TWEAK_DIR/$name.dylib"
+    test -f "$TWEAK_DIR/$name.plist"
+done
+mkdir -p "$SHARED_DIR"
+chown mobile:mobile "$SHARED_DIR"
+chmod 0775 "$SHARED_DIR"
+touch "$SHARED_DIR/Settings.lock"
+chown mobile:mobile "$SHARED_DIR/Settings.lock"
+chmod 0664 "$SHARED_DIR/Settings.lock"
+if ! command -v uicache >/dev/null 2>&1; then
+    echo 'iCamV3: uicache missing, app registration failed' >&2; exit 1
+fi
+uicache -p "$APP_PATH"
+killall mediaserverd cameracaptured 2>/dev/null || true
+echo 'iCamV3: đã đăng ký app. Respring để nạp bộ điều khiển nổi; mặc định bảng nổi tắt.'
+exit 0
