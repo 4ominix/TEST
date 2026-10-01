@@ -1,0 +1,73 @@
+name: Build iCamV3 Rebuild RootHide
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout entire source tree
+        uses: actions/checkout@v4
+      - name: Verify source identity and structure
+        run: |
+          python3 tools/verify_release.py manifest
+          python3 tools/verify_release.py source
+      - name: Host regression tests
+        run: python3 tests/test_release.py
+      - name: Native geometry, requests, storage, sample and engine lifetime tests
+        run: |
+          clang -std=c11 -Wall -Wextra -Werror tests/geometry.c -o "$RUNNER_TEMP/icam-geometry"
+          "$RUNNER_TEMP/icam-geometry"
+          clang -std=c11 -Wall -Wextra -Werror tests/requests.c -o "$RUNNER_TEMP/icam-requests"
+          "$RUNNER_TEMP/icam-requests"
+          clang -fobjc-arc -DIC_TESTING -ICore -framework Foundation tests/storage.m Core/ICPaths.m Core/ICSettings.m -o "$RUNNER_TEMP/icam-storage"
+          "$RUNNER_TEMP/icam-storage"
+          clang -fobjc-arc -ICore -framework Foundation -framework CoreMedia -framework CoreVideo tests/sample.m Core/ICSample.m -o "$RUNNER_TEMP/icam-sample"
+          "$RUNNER_TEMP/icam-sample"
+          clang -fobjc-arc -DIC_TESTING -ICore -framework Foundation -framework CoreImage -framework CoreGraphics -framework QuartzCore -framework AVFoundation -framework ImageIO -framework CoreMedia -framework CoreVideo tests/engine.m Core/ICFrameEngine.m Core/ICMediaSource.m Core/ICRender.m Core/ICSettings.m Core/ICPaths.m -o "$RUNNER_TEMP/icam-engine"
+          "$RUNNER_TEMP/icam-engine"
+      - name: Setup RootHide Theos and patched SDKs
+        uses: waruhachi/theos-action@v2.4.10
+        with:
+          theos-src: waruhachi/theos
+          theos-branch: main
+          sdks-src: waruhachi/sdks
+          sdks-branch: main
+          libgcuniversal: 'false'
+          altlist: 'false'
+          comet: 'false'
+          orion: 'false'
+      - name: Check RootHide scheme and maintainer scripts
+        run: |
+          test -n "${THEOS:-}"
+          test -d "$THEOS/mod/roothide"
+          chmod 755 layout/DEBIAN/postinst layout/DEBIAN/prerm
+          sh -n layout/DEBIAN/postinst
+          sh -n layout/DEBIAN/prerm
+      - name: Build RootHide DEB
+        run: make clean package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide
+      - name: Install DEB inspection tool
+        run: |
+          if ! command -v dpkg-deb >/dev/null 2>&1; then brew install dpkg; fi
+          command -v dpkg-deb
+      - name: Verify actual packaged binaries
+        run: |
+          deb="$(find packages -maxdepth 1 -type f -name '*.deb' -print -quit)"
+          test -n "$deb"
+          dpkg-deb --contents "$deb"
+          dpkg-deb --extract "$deb" "$RUNNER_TEMP/icam-rebuild-data"
+          dpkg-deb --control "$deb" "$RUNNER_TEMP/icam-rebuild-control"
+          python3 tools/verify_release.py package --data "$RUNNER_TEMP/icam-rebuild-data" --control "$RUNNER_TEMP/icam-rebuild-control"
+          shasum -a 256 "$deb"
+      - name: Upload verified DEB
+        uses: actions/upload-artifact@v4
+        with:
+          name: iCamV3-Rebuild-RootHide-DEB
+          path: packages/*.deb
+          if-no-files-found: error
